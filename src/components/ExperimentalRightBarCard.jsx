@@ -27,16 +27,18 @@ function ExperimentalRightBarCard({ cardTitle, cardText, cardScore, url }) {
       setExpanded(!expanded);
     };
 
+    const formattedHTML = cardText.replace(/class="([^"]*)"/g, 'class="highlight"');
+    
     return (
         <Card className='info-card'>
             <div className="card-title-container">
-                <h5 className="card-title"><Link href={url} underline='hover' target='_blank' rel='noopener' >{cardTitle}<OpenInNewIcon fontSize='small'/></Link></h5>
+                <h6 className="card-title"><Link href={url} underline='hover' target='_blank' rel='noopener' >{cardTitle}<OpenInNewIcon fontSize='small'/></Link></h6>
                 <div className="card-score">
-                    <h6>Precisión:  </h6>
-                    <h6 className={cardScore > 60 ? "card-score-green" : "card-score-red"}>{cardScore}%</h6>
+                    {/*<h6>Precisión:  </h6>
+                    <h6 className={cardScore > 60 ? "card-score-green" : "card-score-red"}>{cardScore}%</h6>*/}
                 </div>
             </div>
-            <CardContent className="card-text">{cardText}</CardContent>
+            <CardContent className="card-text"><div dangerouslySetInnerHTML={{ __html: formattedHTML }}></div></CardContent>
             <CardActions disableSpacing>
                 <ExpandMore
                     expand={expanded}
@@ -49,7 +51,7 @@ function ExperimentalRightBarCard({ cardTitle, cardText, cardScore, url }) {
             </CardActions>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <CardContent>
-                    {cardText}
+                    <div dangerouslySetInnerHTML={{ __html: formattedHTML }}></div>
                 </CardContent>
             </Collapse>
         </Card>

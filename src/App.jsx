@@ -1,28 +1,91 @@
 import { useState, useEffect } from "react";
+
 import "./App.css";
 import { WebChatContainer, setEnableDebug } from "@ibm-watson/assistant-web-chat-react";
-import { getObjectByPath, getAllNestedKeys, changeNeuralSeekLastKey } from "./utils.js";
+import { getObjectByPath, getAllNestedKeys, changeNeuralSeekLastKey, normalizePassages } from "./utils.js";
 import LeftBar from "./components/LeftBar";
-import BottomBar from "./components/BottomBar";
 import RightBar from "./components/RightBar";
 import Header from "./components/Header";
+import DiscoveryRightBar from "./components/DiscoveryRightBar";
 
 setEnableDebug(true);
+
+//--GLOBAL VARIABLES--
+var FIELDS = ["title", "text"];
+var CHARACTERS = 250;
+var RETURN = [
+  "document_id",
+  "extracted_metadata.filename",
+  "extracted_metadata.title",
+  "metadata.source.url",
+];
+var COLLECTION_IDS = [
+  '58e60b62-4c08-2181-0000-018bd46ba83a',
+  '02300ce4-6558-fd93-0000-018bd4e9483e',
+  '131b8e2b-95c3-cf93-0000-018bc9625cd9',
+  '167edcfd-669c-141e-0000-018bc9e5058b'
+]
+
+const apikey = import.meta.env.VITE_DISCOVERY_API_KEY;
+const endpoint = import.meta.env.VITE_DISCOVERY_URL;
+const project_id = import.meta.env.VITE_DISCOVERY_PROJECT_ID;
+
+// query parameters
+const version = import.meta.env.VITE_DISCOVERY_VERSION;
+
+async function fetchDiscoveryData (query, setDiscoveryData) {
+  try {
+    const postData = {
+      collection_ids: COLLECTION_IDS,
+      natural_language_query: query,
+      return: RETURN,
+      table_results: {enabled: false},
+      // count: 3,
+      passages: {
+        //object
+        enabled: true, //boolean
+        fields: FIELDS, //string[]
+        characters: CHARACTERS, //integer
+        find_answers: true, //boolean
+      }
+    };
+
+    console.log(query);
+
+    const response = await fetch(endpoint + "/v2/projects/" + project_id + "/query?version=" + version, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + btoa(`apikey:${apikey}`)
+      },
+      body: JSON.stringify(postData)
+    });
+
+    if (response.ok) {
+      const responseData = await response.json();
+      setDiscoveryData(responseData);
+      console.log(responseData);
+    } else {
+      throw new Error('Failed to post data');
+    }
+  } catch (error) {
+    console.error('Error posting data:', error);
+  }
+};
 
 function onBeforeRender(instance, setInstance) {
   setInstance(instance);
   instance.restartConversation();
 }
 
-function onAfterRender(instance, setScore, setAnswer, setDocument, setPassages) {
+function onAfterRender(instance, setScore, setAnswer, setDocument, setPassages, setQuery) {
   instance.changeView({ mainWindow: true, launcher: false });
-  instance.on({ type: "send", handler: sendHandler });
+  instance.on({ type: "send", handler: (event) => sendHandler(event, setQuery) });
   instance.on({ type: "receive", handler: (event) => receiveHandler(event, setScore, setAnswer, setDocument, setPassages) });
 }
 
-function sendHandler(event) {
-  const messageSent = event.data.input.text;
-  console.log(messageSent);
+function sendHandler(event, setQuery) {
+  setQuery(event.data.input.text);
 }
 
 function receiveHandler(event, setScore, setAnswer, setDocument, setPassages) {
@@ -55,7 +118,6 @@ function receiveHandler(event, setScore, setAnswer, setDocument, setPassages) {
 
     const passagesKey = changeNeuralSeekLastKey(scoreKey, "passage");
     console.log(passagesKey);
-
     const passagesData = getObjectByPath(event.data.output.debug, passagesKey);
     console.log(passagesData);
 
@@ -80,7 +142,23 @@ function App() {
   const [neural_document, setDocument] = useState(null);
   const [passages, setPassages] = useState([]);
   const [webChatOptions, setWebChatOptions] = useState(null);
-  const [request, setRequest] = useState(null);
+  const [discoveryData, setDiscoveryData] = useState(null);
+  const [query, setQuery] = useState("");
+  const [discoveryPassages, setDiscoveryPassages] = useState([]);
+
+  useEffect(() => {
+    console.log('La variable "query" ha cambiado:', query);
+    if (query !== "") {
+      fetchDiscoveryData(query, setDiscoveryData);
+    } 
+  }, [query]);
+
+  useEffect(() => {
+    if (discoveryData) {
+      const discoveryChunks = normalizePassages(discoveryData);
+      setDiscoveryPassages(discoveryChunks);
+    }
+  }, [discoveryData]);
 
   useEffect(() => {
     // RENDER FAVICON
@@ -130,13 +208,14 @@ function App() {
               id="esteId"
               config={webChatOptions}
               onBeforeRender={(instance) => onBeforeRender(instance, setInstance)}
-              onAfterRender={(instance) => onAfterRender(instance, setScore, setAnswer, setDocument, setPassages)}
+              onAfterRender={(instance) => onAfterRender(instance, setScore, setAnswer, setDocument, setPassages, setQuery)}
             />
           )}
           </div>
         </div>
         <div className="right-column">
-          <RightBar passages={passages} receiveHandler={(event) => receiveHandler(event, setScore)} />
+          {/*<RightBar passages={passages} receiveHandler={(event) => receiveHandler(event, setScore)} />*/}
+          <DiscoveryRightBar passages={discoveryPassages} />
         </div>
       </div>
     </div>
