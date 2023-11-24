@@ -20,10 +20,10 @@ var RETURN = [
   "metadata.source.url",
 ];
 var COLLECTION_IDS = [
-  '58e60b62-4c08-2181-0000-018bd46ba83a',
-  '02300ce4-6558-fd93-0000-018bd4e9483e',
-  '131b8e2b-95c3-cf93-0000-018bc9625cd9',
-  '167edcfd-669c-141e-0000-018bc9e5058b'
+  'b2bca95a-5bcf-b8e1-0000-018b2a074f51',
+  '594b5dff-d290-1327-0000-018b2a0cbe59',
+  'b2bca95a-5bcf-b8e1-0000-018b2a1268ab',
+  'b2bca95a-5bcf-b8e1-0000-018b2a34e159'
 ]
 
 const apikey = import.meta.env.VITE_DISCOVERY_API_KEY;
